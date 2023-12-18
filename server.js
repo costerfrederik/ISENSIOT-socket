@@ -30,14 +30,14 @@ async function getNewData() {
         const query = `
             SELECT DISTINCT ON (mv.identifier) mv.identifier, p.*
             FROM my_vehicles mv
-            LEFT JOIN positions p ON mv.identifier = p.identifier
+            LEFT JOIN positions p ON mv.identifier = p.vehicle_identifier
             ORDER BY mv.identifier, p.id DESC
         `;
 
         const result = await client.query(query);
         const newData = result.rows.map(row => ({
             identifier: row.identifier,
-            position: row.id ? (({ identifier, ...rest }) => rest)(row) : null
+            position: row.id ? (({ vehicle_identifier, identifier, ...rest }) => rest)(row) : null
         }));
 
         client.release();
