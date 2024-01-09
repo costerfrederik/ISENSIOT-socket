@@ -64,6 +64,8 @@ async function getNewDataHistory(identifier) {
             position: row.id ? (({ vehicle_identifier, identifier, ...rest }) => rest)(row) : null,
         }));
 
+        console.log(newData);
+
         client.release();
         return newData;
     } catch (error) {
