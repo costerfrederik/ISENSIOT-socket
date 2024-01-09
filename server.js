@@ -35,9 +35,33 @@ async function getNewData() {
         `;
 
         const result = await client.query(query);
-        const newData = result.rows.map(row => ({
+        const newData = result.rows.map((row) => ({
             identifier: row.identifier,
-            position: row.id ? (({ vehicle_identifier, identifier, ...rest }) => rest)(row) : null
+            position: row.id ? (({ vehicle_identifier, identifier, ...rest }) => rest)(row) : null,
+        }));
+
+        client.release();
+        return newData;
+    } catch (error) {
+        console.error('Something went wrong trying to get new data');
+    }
+}
+
+async function getNewDataHistory(identifier) {
+    try {
+        const client = await pool.connect();
+        const query = `
+            SELECT *
+            FROM positions
+            WHERE p.identifier = $1
+            ORDER BY id ASC
+            LIMIT 30;
+        `;
+
+        const result = await client.query(query, identifier);
+        const newData = result.rows.map((row) => ({
+            identifier: row.identifier,
+            position: row.id ? (({ vehicle_identifier, identifier, ...rest }) => rest)(row) : null,
         }));
 
         client.release();
@@ -54,11 +78,11 @@ pool.connect((err, client, done) => {
     }
 
     client.query('LISTEN refresh_needed');
-    client.on('notification', async() => {
+    client.on('notification', async () => {
         const newData = await getNewData();
         io.emit('refresh_needed', newData);
-    })
-})
+    });
+});
 
 // When client connects to socket io server
 io.on('connection', (socket) => {
@@ -74,11 +98,20 @@ io.on('connection', (socket) => {
         const newData = await getNewData();
         socket.emit('refresh_needed', newData);
     });
+
+    // Use once or on
+    socket.once('data_request_history', async (identifier) => {
+        console.log('Data history is requested');
+        const newData = await getNewDataHistory();
+        socket.emit('refresh_needed', newData);
+    });
+
+    socket.on('create_vehicle', async (identifier) => {
+        console.log('Create new vehicle is requested');
+    });
 });
 
 // Listen on user defined port
 server.listen(socket_server_port, () => {
     console.log(`WebSocket Server is listening on port ${socket_server_port}`);
 });
-
-
