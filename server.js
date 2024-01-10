@@ -1,7 +1,7 @@
 const express = require('express');
 const http = require('http');
 const socketIO = require('socket.io');
-const { Pool, Client } = require('pg');
+const { Pool } = require('pg');
 
 // Script settings
 dashboard_url = 'http://localhost:8080';
@@ -47,29 +47,30 @@ async function getNewData() {
     }
 }
 
-async function getNewDataHistory(identifier) {
+async function getNewHistory(identifier) {
     try {
         const client = await pool.connect();
+
         const query = `
-            SELECT *
-            FROM positions
-            WHERE p.identifier = $1
-            ORDER BY id ASC
-            LIMIT 30;
+            SELECT positions.id, my_vehicles.identifier, positions.latitude, positions.longitude, positions.datetime, positions.speed
+            FROM my_vehicles
+            INNER JOIN positions ON my_vehicles.identifier = positions.vehicle_identifier
+            WHERE my_vehicles.identifier = $1
+            ORDER BY positions.id DESC
+            LIMIT 20
         `;
 
-        const result = await client.query(query, identifier);
+        const result = await client.query(query, [identifier]);
+
         const newData = result.rows.map((row) => ({
             identifier: row.identifier,
             position: row.id ? (({ vehicle_identifier, identifier, ...rest }) => rest)(row) : null,
         }));
 
-        console.log(newData);
-
         client.release();
         return newData;
     } catch (error) {
-        console.error('Something went wrong trying to get new data');
+        console.error('Something went wrong trying to get new history');
     }
 }
 
@@ -102,10 +103,10 @@ io.on('connection', (socket) => {
     });
 
     // Use once or on
-    socket.once('data_request_history', async (identifier) => {
-        console.log('Data history is requested');
-        const newData = await getNewDataHistory();
-        socket.emit('refresh_needed', newData);
+    socket.once('history_request', async (identifier) => {
+        console.log('History is requested');
+        const newHistory = await getNewHistory(identifier);
+        socket.emit('history_refresh_needed', newHistory);
     });
 
     socket.on('create_vehicle', async (identifier) => {
