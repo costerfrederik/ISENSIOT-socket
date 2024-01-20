@@ -25,16 +25,39 @@ const pool = new Pool({
 });
 
 async function createTaxi(newTaxi) {
+    // TODO: Validate newTaxi data to make sure identifier field exists
+
     try {
         const client = await pool.connect();
-        const query = `
+
+        const selectQuery = `
+            SELECT *
+            FROM my_vehicles
+            WHERE identifier = $1
+            LIMIT 1
+        `;
+
+        const selectResult = await client.query(selectQuery, [newTaxi['identifier']]);
+
+        if (selectResult.rows[0]) {
+            client.release();
+            throw new Error('Vehicle with that identifier already exists. Please change the identifier to continue');
+        }
+
+        const createQuery = `
             INSERT INTO my_vehicles (identifier)
             VALUES ($1)
         `;
-        const result = await client.query(query, [newTaxi['identifier']]);
-        client.release()
+
+        await client.query(createQuery, [newTaxi['identifier']]);
+
+        client.release();
+
+        console.log(`Successfully created new taxi: ${newTaxi['identifier']}`);
+        return `Successfully created new taxi: ${newTaxi['identifier']}`;
     } catch (error) {
-        console.error('Something went wrong trying to get new data', error);
+        console.error(error.message);
+        return error.message;
     }
 }
 
