@@ -109,7 +109,8 @@ io.on('connection', (socket) => {
     // New listener
     socket.on('taxi_create', async (data) => {
         console.log("New taxi is requested");
-        const newTaxi = await createTaxi(data);
+        const response = await createTaxi(data);
+        socket.emit('taxi_inserted', response);
     });
 
     // Use once or on
