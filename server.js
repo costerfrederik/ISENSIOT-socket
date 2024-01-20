@@ -24,6 +24,21 @@ const pool = new Pool({
     port: 5432,
 });
 
+async function createTaxi(newTaxi) {
+    try {
+        const client = await pool.connect();
+        const query = `
+            INSERT INTO my_vehicles (identifier)
+            VALUES ($1)
+        `;
+        const result = await client.query(query, [newTaxi['identifier']]);
+        client.release()
+    } catch (error) {
+        console.error('Something went wrong trying to get new data', error);
+    }
+}
+
+
 async function getNewData() {
     try {
         const client = await pool.connect();
@@ -66,6 +81,12 @@ io.on('connection', (socket) => {
 
     socket.on('disconnect', (reason) => {
         console.log(`user disconnected: ${socket.id}, reason: ${reason}`);
+    });
+
+    // New listener
+    socket.on('taxi_create', async (data) => {
+        console.log("New taxi is requested");
+        const newTaxi = await createTaxi(data);
     });
 
     // Use once or on
