@@ -24,6 +24,50 @@ const pool = new Pool({
     port: 5432,
 });
 
+async function createTaxi(newTaxi) {
+    // TODO: Validate newTaxi data to make sure identifier field exists
+
+    try {
+        const client = await pool.connect();
+
+        const selectQuery = `
+            SELECT *
+            FROM my_vehicles
+            WHERE identifier = $1
+            LIMIT 1
+        `;
+
+        const selectResult = await client.query(selectQuery, [newTaxi['identifier']]);
+
+        if (selectResult.rows[0]) {
+            client.release();
+            throw new Error('Vehicle with that identifier already exists. Please change the identifier to continue');
+        }
+
+        const createQuery = `
+            INSERT INTO my_vehicles (identifier)
+            VALUES ($1)
+        `;
+
+        await client.query(createQuery, [newTaxi['identifier']]);
+
+        client.release();
+
+        console.log(`Successfully created new taxi: ${newTaxi['identifier']}`);
+        return {
+            message: `Successfully created new taxi: ${newTaxi['identifier']}`,
+            success: true
+        };
+    } catch (error) {
+        console.error(error.message);
+        return {
+            message: error.message,
+            success: false
+        };
+    }
+}
+
+
 async function getNewData() {
     try {
         const client = await pool.connect();
@@ -66,6 +110,13 @@ io.on('connection', (socket) => {
 
     socket.on('disconnect', (reason) => {
         console.log(`user disconnected: ${socket.id}, reason: ${reason}`);
+    });
+
+    // New listener
+    socket.on('taxi_create', async (data) => {
+        console.log("New taxi is requested");
+        const response = await createTaxi(data);
+        socket.emit('taxi_inserted', response);
     });
 
     // Use once or on
