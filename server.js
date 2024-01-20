@@ -54,10 +54,16 @@ async function createTaxi(newTaxi) {
         client.release();
 
         console.log(`Successfully created new taxi: ${newTaxi['identifier']}`);
-        return `Successfully created new taxi: ${newTaxi['identifier']}`;
+        return {
+            message: `Successfully created new taxi: ${newTaxi['identifier']}`,
+            success: true
+        };
     } catch (error) {
         console.error(error.message);
-        return error.message;
+        return {
+            message: error.message,
+            success: false
+        };
     }
 }
 
