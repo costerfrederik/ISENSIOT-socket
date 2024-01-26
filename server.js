@@ -205,14 +205,15 @@ async function logTrespassers(allData) {
             }
 
             const createQuery = `
-                INSERT INTO geofence_violations (vehicle_identifier, latitude, longitude, datetime)
-                VALUES ($1, $2, $3, $4)
+                INSERT INTO geofence_violations (vehicle_identifier, latitude, longitude, datetime, speed)
+                VALUES ($1, $2, $3, $4, $5)
             `;
             await client.query(createQuery, [
                 mapDataObject.identifier,
                 mapDataObject.position.latitude,
                 mapDataObject.position.longitude,
                 mapDataObject.position.datetime,
+                mapDataObject.position.speed,
             ]);
         } catch (error) {
             throw error;
